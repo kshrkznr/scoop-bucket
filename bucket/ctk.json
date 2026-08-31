@@ -1,0 +1,23 @@
+{
+    "version": "0.5.2",
+    "description": "Compose and reproduce VS Code-family environments",
+    "homepage": "https://github.com/kshrkznr/code-toolkit",
+    "license": "MIT",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/kshrkznr/code-toolkit/releases/download/v0.5.2/ctk_v0.5.2_windows_amd64.zip",
+            "hash": "c4d80d1136f6185f0c3eb82465bce7af962232588e829530578fdc4cfb1ef29a"
+        }
+    },
+    "bin": "ctk.exe",
+    "checkver": {
+        "github": "https://github.com/kshrkznr/code-toolkit"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/kshrkznr/code-toolkit/releases/download/v$version/ctk_v$version_windows_amd64.zip"
+            }
+        }
+    }
+}
