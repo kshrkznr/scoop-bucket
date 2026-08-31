@@ -42,3 +42,46 @@ jobs:
         run: |
           $env:SCOOP_HOME="$(Convert-Path '.\scoop_core')"
           .\my_bucket\bin\test.ps1
+
+  package-smoke:
+    name: Verify packaged CTK
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - name: Checkout Bucket
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Verify manifest artifact and packaged CLI
+        run: |
+          $ErrorActionPreference = "Stop"
+          $manifest = Get-Content -LiteralPath ".\bucket\ctk.json" -Raw | ConvertFrom-Json
+          $package = Join-Path $env:RUNNER_TEMP "ctk.zip"
+          $extract = Join-Path $env:RUNNER_TEMP "ctk-package"
+          $workspace = Join-Path $env:RUNNER_TEMP "ctk-workspace"
+
+          Invoke-WebRequest -Uri $manifest.architecture.'64bit'.url -OutFile $package
+          $actualHash = (Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -ne $manifest.architecture.'64bit'.hash) {
+            throw "Manifest hash mismatch: expected $($manifest.architecture.'64bit'.hash), got $actualHash"
+          }
+
+          Expand-Archive -LiteralPath $package -DestinationPath $extract
+          $binary = Join-Path $extract "ctk.exe"
+          $version = (& $binary version 2>&1 | Out-String)
+          if ($LASTEXITCODE -ne 0 -or -not $version.Contains("ctk v$($manifest.version)")) {
+            throw "Packaged ctk version failed: $version"
+          }
+
+          $docs = (& $binary docs status 2>&1 | Out-String)
+          if ($LASTEXITCODE -ne 0 -or -not $docs.Contains("source: packaged")) {
+            throw "Packaged ctk docs failed: $docs"
+          }
+
+          & $binary init $workspace --exclude-sample
+          if ($LASTEXITCODE -ne 0 -or
+              -not (Test-Path (Join-Path $workspace "cookbook\recipe")) -or
+              -not (Test-Path (Join-Path $workspace "cookbook\ingredient"))) {
+            throw "Packaged ctk init verification failed"
+          }
